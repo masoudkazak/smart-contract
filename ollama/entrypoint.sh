@@ -43,11 +43,7 @@ TEMPLATE """{{ if .System }}### System:
 ### Assistant:
 """
 
-PARAMETER temperature 0.7
-PARAMETER top_k 20
-PARAMETER top_p 0.8
 PARAMETER repeat_penalty 1.2
-PARAMETER num_predict 256
 PARAMETER num_ctx 2048
 
 PARAMETER stop "### User:"

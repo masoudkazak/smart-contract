@@ -1,100 +1,76 @@
-from typing import Any, AsyncGenerator, Dict, List
-import asyncio
+from __future__ import annotations
+from typing import Any, AsyncGenerator, Dict
 import httpx
 from loguru import logger
+from app.config import get_settings
 
-from ..config import get_settings
 
 settings = get_settings()
 
-_OLLAMA_SEMAPHORE = asyncio.Semaphore(1)
 
-ALLOWED_MODELS = {
-    settings.OLLAMA_MODEL_NAME,
-}
+def _get_client() -> httpx.AsyncClient:
+    return httpx.AsyncClient(
+        base_url=settings.ollama_base_url,
+        timeout=60.0,
+    )
 
 
-class OllamaClient:
-    def __init__(self) -> None:
-        self._base_url = settings.ollama_base_url
-        self._client: httpx.AsyncClient | None = None
+async def chat_completion(
+    prompt: str,
+    system_prompt: str,
+    temperature: int = 0.7,
+    top_p: int = 0.8,
+    top_k: int = 20,
+    num_predict: int = 300,
+) -> AsyncGenerator[str, None]:
+    payload: Dict[str, Any] = {
+        "model": settings.OLLAMA_MODEL_NAME,
+        "messages": [],
+        "temperature": temperature,
+        "top_p": top_p,
+        "top_k": top_k,
+        "num_predict": num_predict,
+        "stream": True,
+    }
 
-    async def _ensure_client(self) -> httpx.AsyncClient:
-        if self._client is None:
-            self._client = httpx.AsyncClient(
-                base_url=self._base_url,
-                timeout=httpx.Timeout(
-                    connect=5.0,
-                    read=120.0,
-                    write=10.0,
-                    pool=5.0,
-                ),
-                limits=httpx.Limits(
-                    max_connections=5,
-                    max_keepalive_connections=2,
-                ),
-            )
-        return self._client
+    payload["messages"].append(
+        {"role": "system", "content": system_prompt}
+    )
 
-    async def close(self) -> None:
-        if self._client:
-            await self._client.aclose()
-            self._client = None
+    payload["messages"].append(
+        {"role": "user", "content": prompt}
+    )
 
-    async def list_models(self) -> List[Dict[str, Any]]:
-        client = await self._ensure_client()
+    client = _get_client()
+
+    async def _stream_generator() -> AsyncGenerator[str, None]:
         try:
-            resp = await client.get("/api/tags", timeout=10.0)
-            resp.raise_for_status()
-            data = resp.json()
+            async with client.stream(
+                "POST",
+                "/api/chat",
+                json=payload,
+            ) as resp:
+                resp.raise_for_status()
 
-            return [
-                {
-                    "id": m.get("name"),
-                    "object": "model",
-                }
-                for m in data.get("models", [])
-            ]
-        except Exception as e:
-            logger.error(f"Ollama list_models failed: {e}")
-            return []
+                async for line in resp.aiter_lines():
+                    if not line:
+                        continue
 
-    async def chat_stream(
-        self,
-        messages: List[Dict[str, Any]],
-        model: str,
-    ) -> AsyncGenerator[str, None]:
-        if model not in ALLOWED_MODELS:
-            logger.warning(f"Model '{model}' not allowed, fallback applied")
-            model = settings.OLLAMA_MODEL_NAME
+                    try:
+                        data = httpx.Response(200, text=line).json()
+                    except Exception:
+                        continue
 
-        payload: Dict[str, Any] = {
-            "model": model,
-            "messages": messages,
-            "stream": True,
-        }
+                    message = data.get("message", {})
+                    content = message.get("content")
 
-        client = await self._ensure_client()
+                    if content:
+                        yield content
 
-        async with _OLLAMA_SEMAPHORE:
-            try:
-                async with client.stream(
-                    "POST",
-                    "/api/chat",
-                    json=payload,
-                ) as resp:
-                    resp.raise_for_status()
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"Ollama streaming error: {exc}")
+            raise
+        finally:
+            await client.aclose()
 
-                    async for line in resp.aiter_lines():
-                        if line and line.strip():
-                            yield line
-
-            except httpx.HTTPError as e:
-                logger.error(f"Ollama streaming HTTP error: {e}")
-                raise
-            except Exception as e:
-                logger.exception("Unexpected Ollama streaming error")
-                raise
-
-
-ollama_client = OllamaClient()
+    return _stream_generator()

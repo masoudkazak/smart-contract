@@ -11,7 +11,7 @@ down-v:
 	docker compose -f docker-compose.dev.yml down -v
 
 migrate: # docker exec backend-dev alembic revision --autogenerate -m ""
-	docker exec -f backend-dev alembic upgrade head 
+	docker exec -it backend-dev alembic upgrade head 
 
 postgres:
 	docker exec -it postgres-dev psql -U smart -d smart
