@@ -39,6 +39,7 @@ services:
       - .env
     volumes:
       - ./backend:/app
+      - ./ollama/models/MiniLM-L12-V2:/models/MiniLM-L12-V2:ro
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
@@ -47,6 +48,22 @@ services:
       ollama:
         condition: service_started
       
+    networks:
+      - smart-network
+    restart: unless-stopped
+
+  streamlit:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: streamlit-dev
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      backend:
+        condition: service_started
     networks:
       - smart-network
     restart: unless-stopped
