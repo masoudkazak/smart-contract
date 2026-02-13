@@ -3,7 +3,6 @@ from fastapi import FastAPI
 from .config import get_settings
 from app.routers import chat
 from .logging_config import setup_logging 
-from loguru import logger
 
 settings = get_settings()
 setup_logging()

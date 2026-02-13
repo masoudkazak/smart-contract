@@ -1,16 +1,21 @@
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import AsyncGenerator
+
 from app.db import get_session
 from app.models import Conversation, Message
-from app.schemas import MessageCreate, MessageResponse
+from app.schemas import MessageCreate
 from app.services.ollama_client import chat_completion
 
 router = APIRouter()
 
 
-@router.post("/chat", response_model=MessageResponse)
-async def chat(payload: MessageCreate, session: AsyncSession = Depends(get_session)) -> MessageResponse:
-    conv: Conversation | None = None
+@router.post("/chat/stream")
+async def chat_stream(
+    payload: MessageCreate,
+    session: AsyncSession = Depends(get_session),
+):
     if payload.conversation_id:
         conv = await session.get(Conversation, payload.conversation_id)
         if not conv:
@@ -26,6 +31,7 @@ async def chat(payload: MessageCreate, session: AsyncSession = Depends(get_sessi
         content=payload.question,
     )
     session.add(user_message)
+    await session.commit()
 
     system_prompt = (
         "You are a helpful assistant. "
@@ -33,28 +39,32 @@ async def chat(payload: MessageCreate, session: AsyncSession = Depends(get_sessi
     )
     final_prompt = f"User question:\n{payload.question}\n\nProvide a concise, well-structured answer."
 
-    answer = await chat_completion(final_prompt, system_prompt=system_prompt)
-    if isinstance(answer, str):
-        final_answer = answer
-    else:
-        parts = []
-        async for part in answer:
-            parts.append(part)
+    ollama_stream = await chat_completion(
+        final_prompt,
+        system_prompt=system_prompt,
+    )
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        parts: list[str] = []
+
+        async for chunk in ollama_stream:
+            parts.append(chunk)
+            yield chunk
+
         final_answer = "".join(parts)
 
-    assistant_message = Message(
-        conversation_id=conv.id,
-        role="assistant",
-        content=final_answer,
-    )
-    session.add(assistant_message)
+        assistant_message = Message(
+            conversation_id=conv.id,
+            role="assistant",
+            content=final_answer,
+        )
+        session.add(assistant_message)
+        await session.commit()
 
-    await session.commit()
-    await session.refresh(conv)
-
-    return MessageResponse(
-        conversation_id=conv.id,
-        answer=final_answer,
-        intent=None,
-        confidence=None,
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/plain",
+        headers={
+            "X-Conversation-Id": str(conv.id),
+        },
     )
