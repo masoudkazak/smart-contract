@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: postgres-dev
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-smart}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-smart}
+      POSTGRES_DB: ${POSTGRES_DB:-smart}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - smart-network
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-dev
+    volumes:
+      - ollama_data:/root/.ollama
+      - ./ollama/models/Qwen3-0.6B-GGUF:/models/Qwen3-0.6B-GGUF:ro
+      - ./ollama/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/entrypoint.sh"]
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    networks:
+      - smart-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend-dev
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_started
+      ollama:
+        condition: service_started
+      
+    networks:
+      - smart-network
+    restart: unless-stopped
+
+networks:
+  smart-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  ollama_data:

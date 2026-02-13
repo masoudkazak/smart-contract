@@ -1,0 +1,14 @@
+fastapi[standard]
+uvicorn[standard]
+sqlalchemy[asyncio]
+asyncpg
+psycopg[binary]
+alembic
+pydantic
+pydantic-settings
+python-dotenv
+httpx
+sentence-transformers
+loguru
+python-magic
+pgvector
