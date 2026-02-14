@@ -1,19 +1,18 @@
-"""initial migrate
+"""
 
-Revision ID: 0c4ba3580a1f
+Revision ID: c16410a710ac
 Revises: 
-Create Date: 2026-02-13 16:41:02.809850
+Create Date: 2026-02-14 07:00:49.604881
 
 """
 from typing import Sequence, Union
-
+from pgvector.sqlalchemy import VECTOR
 from alembic import op
 import sqlalchemy as sa
-from pgvector.sqlalchemy import VECTOR
 
 
 # revision identifiers, used by Alembic.
-revision: str = '0c4ba3580a1f'
+revision: str = 'c16410a710ac'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -26,14 +25,14 @@ def upgrade() -> None:
     sa.Column('filename', sa.String(), nullable=False),
     sa.Column('file_type', sa.String(), nullable=False),
     sa.Column('status', sa.String(), nullable=False),
-    sa.Column('uploaded_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('uploaded_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('meta_data', sa.Text(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('conversations',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('document_id', sa.UUID(), nullable=True),
-    sa.Column('started_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('started_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['document_id'], ['documents.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
@@ -62,7 +61,7 @@ def upgrade() -> None:
     sa.Column('conversation_id', sa.UUID(), nullable=False),
     sa.Column('role', sa.String(), nullable=False),
     sa.Column('content', sa.Text(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['conversation_id'], ['conversations.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )

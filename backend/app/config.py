@@ -14,7 +14,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
-
+    
     APP_NAME: str = "smart-backend"
     DEBUG: bool = False
 
@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "smart"
     POSTGRES_HOST: str = "postgres"
     POSTGRES_PORT: int = 5432
+
+    upload_doc_dir: Path = Path("/app/uploads/documents")
 
     @property
     def database_url(self) -> str:

@@ -1,5 +1,5 @@
 import uuid
-
+from datetime import datetime, timezone
 from sqlalchemy import (
     Column,
     String,
@@ -8,7 +8,6 @@ from sqlalchemy import (
     Float,
     Integer,
     ForeignKey,
-    func
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -23,9 +22,10 @@ class Document(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     filename = Column(String, nullable=False)
+    original_filename = Column(String, nullable=False)
     file_type = Column(String, nullable=False)  # pdf | docx
     status = Column(String, nullable=False, default="uploaded")
-    uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
+    uploaded_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     meta_data = Column(Text)
 
     chunks = relationship(
@@ -99,7 +99,7 @@ class Conversation(Base):
         nullable=True
     )
 
-    started_at = Column(DateTime(timezone=True), server_default=func.now())
+    started_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     document = relationship("Document", back_populates="conversations")
 
@@ -124,6 +124,6 @@ class Message(Base):
     role = Column(String, nullable=False)  # user | assistant
     content = Column(Text, nullable=False)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     conversation = relationship("Conversation", back_populates="messages")

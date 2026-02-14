@@ -47,4 +47,5 @@ Thumbs.db
 
 ollama/models
 backend/stdout
+backend/uploads
 explain.txt
