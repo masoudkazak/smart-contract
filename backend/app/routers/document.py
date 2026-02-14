@@ -1,12 +1,18 @@
 import uuid
 import magic
+
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import desc, select
+
 from app.db import get_session
 from app.models import Document
 from app.schemas import DocumentResponse
 from app.config import get_settings
+
 from datetime import datetime, timezone
+from typing import List
 
 settings = get_settings()
 router = APIRouter(prefix="/documents", tags=["Documents"])
@@ -18,6 +24,22 @@ ALLOWED_MIME_TYPES = {
 
 UPLOAD_DIR = settings.upload_doc_dir
 
+
+@router.get(
+    "/",
+    response_model=List[DocumentResponse],
+    status_code=status.HTTP_200_OK,
+)
+async def list_documents(
+    db: AsyncSession = Depends(get_session),
+):
+    result = await db.execute(
+        select(Document).order_by(desc(Document.uploaded_at))
+    )
+    documents = result.scalars().all()
+    return documents
+
+
 @router.post(
     "/upload",
     response_model=DocumentResponse,
@@ -25,7 +47,7 @@ UPLOAD_DIR = settings.upload_doc_dir
 )
 async def upload_document(
     file: UploadFile = File(...),
-    db: Session = Depends(get_session),
+    db: AsyncSession = Depends(get_session),
 ):
     file_bytes = await file.read()
 

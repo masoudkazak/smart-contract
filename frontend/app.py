@@ -9,7 +9,7 @@ st.title("💬 سیستم چت با قابلیت آپلود فایل")
 with st.sidebar:
     st.header("📄 آپلود فایل")
     st.markdown("---")
-    
+
     uploaded_file = st.file_uploader(
         "یک فایل انتخاب کنید (PDF / DOCX)", 
         type=["pdf", "docx"]
@@ -26,14 +26,28 @@ with st.sidebar:
                         timeout=300,
                     )
                     response.raise_for_status()
-                    doc = response.json()
                     st.success(f"✅ فایل با موفقیت آپلود شد!")
 
                 except requests.exceptions.RequestException as e:
                     st.error(f"❌ خطا در آپلود: {e}")
 
     st.markdown("---")
-    st.markdown("### ℹ️ وضعیت")
+    st.header("📂 لیست داکیومنت‌ها")
+
+    try:
+        response = requests.get(f"{BACKEND_URL}/documents")
+        response.raise_for_status()
+        documents = response.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"❌ خطا در دریافت لیست داکیومنت‌ها: {e}")
+        documents = []
+
+    doc_options = {f"{d['original_filename'].split('/')[-1]} ({d['file_type']})": d for d in documents}
+    selected_doc_label = st.selectbox("یک داکیومنت انتخاب کنید", options=list(doc_options.keys()))
+    selected_document = doc_options[selected_doc_label] if selected_doc_label else None
+
+    st.markdown("---")
+    st.markdown("### ℹ️ وضعیت مکالمه")
     if "conversation_id" in st.session_state and st.session_state.conversation_id:
         st.success(f"✅ مکالمه فعال: {st.session_state.conversation_id[:8]}...")
     else:
@@ -62,6 +76,7 @@ if question:
     payload = {
         "question": question,
         "conversation_id": st.session_state.conversation_id,
+        "document_id": selected_document["id"] if selected_document else None
     }
 
     with st.chat_message("assistant"):
