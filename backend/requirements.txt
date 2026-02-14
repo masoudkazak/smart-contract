@@ -12,3 +12,5 @@ sentence-transformers
 loguru
 python-magic
 pgvector
+python-docx
+pypdf

@@ -5,7 +5,6 @@ from sqlalchemy import (
     String,
     Text,
     DateTime,
-    Float,
     Integer,
     ForeignKey,
 )
@@ -30,12 +29,6 @@ class Document(Base):
 
     chunks = relationship(
         "DocumentChunk",
-        back_populates="document",
-        cascade="all, delete-orphan"
-    )
-
-    entities = relationship(
-        "Entity",
         back_populates="document",
         cascade="all, delete-orphan"
     )
@@ -67,25 +60,6 @@ class DocumentChunk(Base):
     section = Column(String)
 
     document = relationship("Document", back_populates="chunks")
-
-
-class Entity(Base):
-    __tablename__ = "entities"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-
-    document_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("documents.id", ondelete="CASCADE"),
-        nullable=False
-    )
-
-    entity_type = Column(String, nullable=False)
-    value = Column(Text, nullable=False)
-
-    confidence = Column(Float)
-
-    document = relationship("Document", back_populates="entities")
 
 
 class Conversation(Base):

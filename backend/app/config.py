@@ -26,6 +26,8 @@ class Settings(BaseSettings):
 
     upload_doc_dir: Path = Path("/app/uploads/documents")
 
+    EMBEDDING_MODEL_PATH: str = "/app/models/MiniLM-L12-V2"
+
     @property
     def database_url(self) -> str:
         return (

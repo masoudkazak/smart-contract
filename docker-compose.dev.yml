@@ -37,9 +37,11 @@ services:
     container_name: backend-dev
     env_file:
       - .env
+    environment:
+      - EMBEDDING_MODEL_PATH=/app/models/MiniLM-L12-V2
     volumes:
       - ./backend:/app
-      - ./ollama/models/MiniLM-L12-V2:/models/MiniLM-L12-V2:ro
+      - ./ollama/models/MiniLM-L12-V2:/app/models/MiniLM-L12-V2:ro
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:

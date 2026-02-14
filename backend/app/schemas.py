@@ -32,7 +32,7 @@ class MessageSchema(BaseModel):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class ConversationSchema(BaseModel):
@@ -42,4 +42,4 @@ class ConversationSchema(BaseModel):
     messages: List[MessageSchema] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True

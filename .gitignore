@@ -49,3 +49,5 @@ ollama/models
 backend/stdout
 backend/uploads
 explain.txt
+example_doc.docx
+example_pdf.pdf

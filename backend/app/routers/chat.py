@@ -10,6 +10,7 @@ from app.db import get_session
 from app.models import Conversation, Message
 from app.schemas import MessageCreate, ConversationSchema, ConversationListSchema
 from app.services.ollama_client import chat_completion
+from loguru import logger
 
 router = APIRouter()
 
@@ -41,7 +42,7 @@ async def chat_stream(
     session: AsyncSession = Depends(get_session),
 ):
     is_new_conversation = False
-
+    print(payload)
     if payload.conversation_id:
         conv = await session.get(Conversation, payload.conversation_id)
         if not conv:
